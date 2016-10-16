@@ -1,12 +1,29 @@
 'use strict';
 
-L.mapbox.accessToken = 'pk.eyJ1IjoidGJhdWVyNTE2IiwiYSI6ImNpdWMxZG90YzAwNnozM21wNW5tNm9tcnMifQ.vQdMiqihNXuWVh1-AfH1bA';
+var chart = $('#chart1');
+chart.height($(window).height() - 100);
+
+mapboxgl.accessToken = 'pk.eyJ1IjoidGJhdWVyNTE2IiwiYSI6ImNpdWMxZG90YzAwNnozM21wNW5tNm9tcnMifQ.vQdMiqihNXuWVh1-AfH1bA';
+
+var map = new mapboxgl.Map({
+	container: 'chart1',
+	style: 'mapbox://styles/tbauer516/ciuc51z1o002q2ho8tsj61yrv',
+	center: [-122.319588, 47.606558],
+	zoom: 9.5
+});
+
+// map.dragPan.disable();
+// map.scrollZoom.disable();
+map.dragRotate.disable();
 
 var rawData = {};
 
-if (false) {
+
+if (true) {
 $.ajax({
-    url: 'https://data.seattle.gov/resource/y7pv-r3kh.json',
+    // url: 'https://data.seattle.gov/resource/y7pv-r3kh.json', //police reports
+    // url: 'https://data.seattle.gov/resource/pu5n-trf4.json', // 911 calls
+    url: 'https://data.seattle.gov/resource/grwu-wqtk.json', // real time firedep calls
     type: 'GET',
     data: {
       '$limit' : 5000,
@@ -20,128 +37,215 @@ $.ajax({
 }
 
 var drawMap = function(data) {
+
+	for (var i = data.length - 1; i >= 0; i--) {
+		if (data[i].longitude == undefined || data[i].latitude == undefined) {
+			console.log(i);
+			data.splice(i, 1);
+		}
+		// console.log(data[i].longitude);
+	}
+
+	var variableName = 'datetime';
+
+	var earliest = d3.min(data, function(d) {
+		return new Date(d[variableName]).getTime();
+	});
+	var latest = d3.max(data, function(d) {
+		return new Date(d[variableName]).getTime();
+	});
+
+	var timeScale = d3.scaleLinear()
+		.domain([earliest, latest])
+		.range([210, 0]);
+		// .range([190, 359]);
+
+	// for (var i = 0; i < data.length; i++) {
+	// 	console.log(timeScale(new Date(data[i][variableName]).getTime()));
+	// }
+	
+
 	var chart = d3.select('#chart1');
 	var chartx = parseFloat(chart.style('width'));
-	chart.style('height', Math.min(chartx, parseInt($(window).height()) - 100) + 'px');
+	// chart.style('height', Math.min(chartx, parseInt($(window).height()) - 100) + 'px');
 	var charty = parseFloat(chart.style('height'));
 
-	var svg = d3.select(map.getPanes().overlayPane).append('svg')
-    	.attr('class', 'leaflet-zoom-animated')
-		.attr('id', '#svg1')
-		.style('width', parseInt(chartx) + 'px')
-		.style('height', parseInt(charty) + 'px');
+	var container = map.getCanvasContainer();
 
-	var g = svg.append("g").attr("class", "leaflet-zoom-hide");
+	var svg = d3.select(container).append('svg')
+    	// .attr('class', 'leaflet-zoom-animated')
+		.attr('id', '#svg1');
+		// .style('width', parseInt(chartx) + 'px')
+		// .style('height', parseInt(charty) + 'px');
 
-	var xscale = d3.scaleLinear()
-		.domain([-122.460195, -122.210256])//.domain([-180, 180])
-		.range([0, chartx]);
+	map.addControl(new mapboxgl.NavigationControl());
 
-	var yscale = d3.scaleLinear()
-		.domain([47.497060, 47.735434])//.domain([-90, 90])
-		.range([charty, 0]);
+	var project = function(d) {
+		return map.project(getLL(d));
+	}
+	var getLL = function(d) {
+		return new mapboxgl.LngLat(parseFloat(d.longitude), parseFloat(d.latitude));
+	}
+
+	var g = svg.append('g');
+
+	// var xscale = d3.scaleLinear()
+	// 	.domain([-122.460195, -122.210256])//.domain([-180, 180])
+	// 	.range([0, chartx]);
+
+	// var yscale = d3.scaleLinear()
+	// 	.domain([47.497060, 47.735434])//.domain([-90, 90])
+	// 	.range([charty, 0]);
 
 	// Update…
-	var circle = g
-		.selectAll('circle')
-		.data(data)
-		.attr('cx', function(d) {
-			return xscale(d.longitude);
-		})
-		.attr('cy', function(d) {
-			return yscale(d.latitude);
-		});
+	var circles = g.selectAll('circle')
+		.data(data);
 
 	// Enter…
-	circle.enter()
+	circles.enter()
 		.append('circle')
-		.attr('cx', function(d) {
-			return xscale(d.longitude);
-		})
-		.attr('cy', function(d) {
-			return yscale(d.latitude);
-		})
-		.attr('r', 5)
-		.style('fill', 'black');
+		.attr('r', 3)
+		.style('fill', function(d) {
+			var time = timeScale(new Date(d[variableName]).getTime());
+			return 'hsl(' + time + ', 100%, 50%)';
+		});
 
 	// Exit…
-	circle.exit()
+	circles.exit()
 		.remove();
+
+	var render = function() {
+		var circles = g.selectAll('circle');
+		circles.attr('cx', function(d) {
+			var x = project(d).x;
+			return x;
+		});
+		circles.attr('cy', function(d) {
+			var y = project(d).y;
+			return y;
+		});
+	}
+
+	map.on('viewreset', function() {
+		render();
+	});
+	map.on('move', function() {
+		render();
+	});
+
+	render();
 }
 
 var testData = [
 	{'latitude': 47.6062,
+	'longitude': -122.3321},
+	{'latitude': 47.6062,
 	'longitude': -122.3321}
 ];
 
-console.log(testData);
-
-var map = L.mapbox.map('chart1', 'mapbox.streets')
-	.setView([47.606558, -122.319588], 10);
-
-drawMap(testData);
+// drawMap(testData);
 
 // EXAMPLE BELOW
 
-// // Map details
-// L.mapbox.accessToken = 'pk.eyJ1Ijoic3RlbmluamEiLCJhIjoiSjg5eTMtcyJ9.g_O2emQF6X9RV69ibEsaIw';
-// var map = L.mapbox.map('map', 'mapbox.streets').setView([53.4072, -2.9821], 14);
+// //Setup mapbox-gl map
+//     var map = new mapboxgl.Map({
+//       container: 'map', // container id
+//       style: 'mapbox://styles/enjalot/cihmvv7kg004v91kn22zjptsc',
+//       center: [-0.1,51.5119112],
+//       zoom: 13.5,
+//     })
+//     map.dragPan.disable();
+//     map.scrollZoom.disable();
+    
+//     // Setup our svg layer that we can manipulate with d3
+//     var container = map.getCanvasContainer()
+//     var svg = d3.select(container).append("svg")
 
-// // Sample Data
-// var data = [
-//     {"coords": [53.3942, -2.9785]}, 
-//     {"coords": [53.4082, -2.9837]}
-// ];
+//     var active = true;
+//     var circleControl = new circleSelector(svg)
+//       .projection(project)
+//       .inverseProjection(function(a) {
+//         return map.unproject({x: a[0], y: a[1]});
+//       })
+//       .activate(active);
+    
+//     d3.select("#circle").on("click", function() {
+//       active = !active;
+//       circleControl.activate(active)
+//       if(active) {
+//         map.dragPan.disable();
+//       } else {
+//         map.dragPan.enable();
+//       }
+//       d3.select(this).classed("active", active)
+//     })
+    
+//     // Add zoom and rotation controls to the map.
+//     map.addControl(new mapboxgl.Navigation());
+    
+//     function project(d) {
+//       return map.project(getLL(d));
+//     }
+//     function getLL(d) {
+//       return new mapboxgl.LngLat(+d.lng, +d.lat)
+//     }
+  
+//     d3.csv("dots.csv", function(err, data) {
+//       //console.log(data[0], getLL(data[0]), project(data[0]))
+//       var dots = svg.selectAll("circle.dot")
+//         .data(data)
+      
+//       dots.enter().append("circle").classed("dot", true)
+//       .attr("r", 1)
+//       .style({
+//         fill: "#0082a3",
+//         "fill-opacity": 0.6,
+//         stroke: "#004d60",
+//         "stroke-width": 1
+//       })
+//       .transition().duration(1000)
+//       .attr("r", 6)
 
-// // Loop through data and create d.LatLng 
-// data.forEach(function(d) {
-//     d.LatLng = new L.LatLng(d.coords[0], d.coords[1]);
-//     map.addLayer(L.circle([d.coords[0], d.coords[1]], 500));
-// });
+//       circleControl.on("update", function() {
+//         svg.selectAll("circle.dot").style({
+//           fill: function(d) {
+//             var thisDist = circleControl.distance(d);
+//             var circleDist = circleControl.distance()
+//             if(thisDist < circleDist) {
+//               return "#ff8eec";
+//             } else {
+//               return "#0082a3"
+//             }
+//           }
+//         })
+//       })
+//       circleControl.on("clear", function() {
+//         svg.selectAll("circle.dot").style("fill", "#0082a3")
+//       })
+      
+//       function render() {
+//         dots.attr({
+//           cx: function(d) { 
+//             var x = project(d).x;
+//             return x
+//           },
+//           cy: function(d) { 
+//             var y = project(d).y;
+//             return y
+//           },
+//         })
+        
+//         circleControl.update(svg)
+//       }
 
-// // Append <svg> to #map
-// var svg = d3.select(map.getPanes().overlayPane).append("svg")
-//     .attr("class", "leaflet-zoom-animated")
-//     .attr("width", window.innerWidth)
-//     .attr("height", window.innerHeight);
+//       // re-render our visualization whenever the view changes
+//       map.on("viewreset", function() {
+//         render()
+//       })
+//       map.on("move", function() {
+//         render()
+//       })
 
-// // Append <g> to <svg>
-// var g = svg.append("g").attr("class", "leaflet-zoom-hide");
-
-// // Append <circle> to <g>
-// var circles = g.selectAll("circle")
-//     .data(data)
-//     .enter()
-//   .append("circle")
-//     .style("fill", "rgba(255, 255, 255, .5)");
-
-// circles.on("mouseenter", function() { return d3.select(this).style("opacity", "0"); });
-// circles.on("mouseleave", function() { return d3.select(this).style("opacity", "1"); });
-
-// function update() {
-//     translateSVG()
-//     circles.attr("cx", function(d) { return map.latLngToLayerPoint(d.LatLng).x; })
-//     circles.attr("cy", function(d) { return map.latLngToLayerPoint(d.LatLng).y; })
-//     circles.attr("r", function(d) { return 0.005 * Math.pow(2, map.getZoom()); })
-// }
-
-// // Adjust the circles when the map is moved
-// function translateSVG() {
-//     var viewBoxLeft = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.x;
-//     var viewBoxTop = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.y;
-//     // Reszing width and height incase of window resize
-//     svg.attr("width", window.innerWidth)
-//     svg.attr("height", window.innerHeight)
-//       // Adding the ViewBox attribute to our SVG to contain it
-//     svg.attr("viewBox", function() {
-//       return "" + viewBoxLeft + " " + viewBoxTop + " " + window.innerWidth + " " + window.innerHeight;
-//     });
-//     // Adding the style attribute to our SVG to transkate it
-//     svg.attr("style", function() {
-//       return "transform: translate3d(" + viewBoxLeft + "px, " + viewBoxTop + "px, 0px);";
-//     });
-// }
-
-// // Re-draw on reset, this keeps the markers where they should be on reset/zoom
-// map.on("moveend", update);
-// update();
+//       // render our initial visualization
+//       render()
+//     })
