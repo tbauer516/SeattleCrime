@@ -21,21 +21,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.2.0/js/tether.min.js" integrity="sha384-Plbmg8JY28KFelvJVai01l8WyZzrYWG825m+cZ0eDDS1f7d/js6ikvy1+X+guPIB" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" integrity="sha384-VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" crossorigin="anonymous"></script>
 
+    <!-- Mapbox -->
     <script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
     <link href='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.css' rel='stylesheet' />
 
     <script src='https://api.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.css' rel='stylesheet' />
 
+
+    <!-- jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
     <!-- your stylesheet -->
     <link rel="stylesheet" href="css/main.css"/>
 <body>
-    <div class="container">
-        <div class="row">
-            Graph
-        </div>
+    <div class="container-fluid">
         <div class="row">
             <div class="col-xs-12">
+                <h1 class="text-xs-center">Graph</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-3">
+                <h1>Side Bar</h1>
+            </div>
+            <div class="col-xs-9">
                 <div id="chart1" class="chart mapboxgl-map">
                     
                 </div>
@@ -46,13 +56,10 @@
 
     <!-- MORE HTML GOES HERE -->
 
-
-    <!-- jQuery library -->
-    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
-
     <!-- D3 library -->
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script> -->
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 
     <!-- your script file -->
     <script src="js/app.js"></script>

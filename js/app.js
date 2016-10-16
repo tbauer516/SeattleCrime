@@ -1,5 +1,6 @@
 'use strict';
 
+
 var chart = $('#chart1');
 chart.height($(window).height() - 100);
 
@@ -14,7 +15,19 @@ var map = new mapboxgl.Map({
 
 // map.dragPan.disable();
 // map.scrollZoom.disable();
-map.dragRotate.disable();
+// map.dragRotate.disable();
+
+var minZoom = 9.5;
+var maxZoom = 13.5;
+map.setMinZoom(minZoom);
+map.setMaxZoom(maxZoom);
+
+map.setMaxBounds(
+[
+[-123.450218, 47.148122],
+[-121.268809, 48.080690]
+]
+);
 
 var rawData = {};
 
@@ -26,11 +39,11 @@ $.ajax({
     url: 'https://data.seattle.gov/resource/grwu-wqtk.json', // real time firedep calls
     type: 'GET',
     data: {
-      '$limit' : 5000,
+      '$limit' : 500,
       '$$app_token' : 'dAJlwethWVOUY6uwgpnHM1ujJ'
     }
 }).then(function(data) {
-	console.log(data);
+	// console.log(data);
 	rawData = data;
 	drawMap(data);
 });
@@ -40,7 +53,7 @@ var drawMap = function(data) {
 
 	for (var i = data.length - 1; i >= 0; i--) {
 		if (data[i].longitude == undefined || data[i].latitude == undefined) {
-			console.log(i);
+			// console.log(i);
 			data.splice(i, 1);
 		}
 		// console.log(data[i].longitude);
@@ -57,8 +70,17 @@ var drawMap = function(data) {
 
 	var timeScale = d3.scaleLinear()
 		.domain([earliest, latest])
-		.range([210, 0]);
+		.range([0, 1]);
+		//.range([210, 0]);
 		// .range([190, 359]);
+
+	var zoomScale = d3.scaleLinear()
+		.domain([minZoom, maxZoom])
+		.range([3, 9]);
+
+	var pitchScale = d3.scaleLinear()
+		.domain([0, 60])
+		.range([1, 0.34]);
 
 	// for (var i = 0; i < data.length; i++) {
 	// 	console.log(timeScale(new Date(data[i][variableName]).getTime()));
@@ -97,41 +119,79 @@ var drawMap = function(data) {
 	// 	.domain([47.497060, 47.735434])//.domain([-90, 90])
 	// 	.range([charty, 0]);
 
+	var getColor = function(d) {
+		var time = timeScale(new Date(d[variableName]).getTime());
+		return d3.interpolateYlOrRd(time);
+		// return d3.interpolateWarm(time);
+		// return 'hsl(' + time + ', 100%, 50%)';
+	}
+
 	// Update…
-	var circles = g.selectAll('circle')
+	var shape = 'ellipse';
+	var circles = g.selectAll(shape)
 		.data(data);
 
 	// Enter…
 	circles.enter()
-		.append('circle')
-		.attr('r', 3)
+		.append(shape)
 		.style('fill', function(d) {
-			var time = timeScale(new Date(d[variableName]).getTime());
-			return 'hsl(' + time + ', 100%, 50%)';
-		});
+			return getColor(d);
+		})
+		.style('fill-opacity', 0.3)
+		.style('stroke', function(d) {
+			return getColor(d);
+		})
+		.style('stroke-opacity', 1);
 
 	// Exit…
 	circles.exit()
 		.remove();
 
 	var render = function() {
-		var circles = g.selectAll('circle');
+		var circles = g.selectAll(shape);
 		circles.attr('cx', function(d) {
 			var x = project(d).x;
 			return x;
-		});
-		circles.attr('cy', function(d) {
+		})
+		.attr('cy', function(d) {
 			var y = project(d).y;
 			return y;
+		})
+		.attr('rx', function(d) {
+			var rxScale = zoomScale(map.getZoom());
+			return rxScale;
+		})
+		.attr('ry', function(d) {
+			var rxScale = zoomScale(map.getZoom());
+			var ryScale = rxScale * pitchScale(map.getPitch());
+			return ryScale;
 		});
 	}
 
-	map.on('viewreset', function() {
-		render();
-	});
-	map.on('move', function() {
-		render();
-	});
+	var clear = function() {
+		var circles = g.selectAll(shape);
+		circles.attr('cx', 0)
+		.attr('cy', 0)
+		.attr('rx', 0)
+		.attr('ry', 0);
+	}
+
+	// map.on('viewreset', function() {
+	// 	render();
+	// });
+	if (data.length > 3000) {
+		map.on('movestart', function() {
+			clear();
+		});
+		map.on('moveend', function() {
+			render();
+		});
+	} else {
+		map.on('move', function() {
+			render();
+		});
+	}
+
 
 	render();
 }
