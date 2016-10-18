@@ -34,7 +34,7 @@ var rawData = {};
 
 if (true) {
 $.ajax({
-    // url: 'https://data.seattle.gov/resource/y7pv-r3kh.json', //police reports
+    // url: 'https://data.seattle.gov/resource/pu5n-trf4.json', //police reports
     // url: 'https://data.seattle.gov/resource/pu5n-trf4.json', // 911 calls
     url: 'https://data.seattle.gov/resource/grwu-wqtk.json', // real time firedep calls
     type: 'GET',
